@@ -1533,7 +1533,7 @@ namespace dlib
 			const tensor& param
 		)
 		{
-			const float p = 0.01f;
+			const float p = 0.1f;
 			const float* s = src.host();
 			float* d = dest.host();
 			for (size_t i = 0; i < dest.size(); ++i)
@@ -1585,7 +1585,7 @@ namespace dlib
 		)
 		{
 			DLIB_CASSERT(is_same_object(grad, gradient_input) == false);
-			const float p = 0.01f;
+			const float p = 0.1f;
 			const float* gi = gradient_input.host();
 			const float* s = src.host();
 			float* out = grad.host();

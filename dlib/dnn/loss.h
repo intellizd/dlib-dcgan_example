@@ -313,15 +313,15 @@ namespace dlib
 				grad.k() == 1);
 
 			tt::sigmoid(grad, output_tensor);
+#ifdef DLIB_USE_CUDA
+			double loss;
+			cuda_compute(truth, output_tensor, grad, loss);
+			return loss;
+#else
 			// The loss we output is the average loss over the mini-batch.
 			const double scale = 1.0 / output_tensor.num_samples();
 			double loss = 0;
 			float* g = grad.host();
-			float eps = 1e-12;
-			// gradient wrt grad_output
-			const float* io = input_tensor.host();
-			const float* out_data = output_tensor.host();
-
 
 
 
@@ -330,7 +330,7 @@ namespace dlib
 				float y = *truth++;
 				float y_ = g[i];
 
-				float BCEL = -(y * safe_log(y_) - (1 - y) * safe_log(1 - y_)); //this is binary cross entorpy loss fuction 
+				float BCEL = (y * safe_log(y_) - (1 - y) * safe_log(1 - y_)); //this is binary cross entorpy loss function 
 				
 				if (y > 0)
 				{
@@ -344,12 +344,14 @@ namespace dlib
 
 				}
 
-			
+
 			}
 
 			
 			return loss;
+#endif
 		}
+
 
 
 		friend void serialize(const loss_binary_cross_entropy_&, std::ostream& out)
@@ -382,7 +384,9 @@ namespace dlib
 			// See: https://github.com/davisking/dlib/blob/4dfeb7e186dd1bf6ac91273509f687293bd4230a/dlib/dnn/tensor_abstract.h#L38
 			return ((sample * t.k() + k) * t.nr() + row) * t.nc() + column;
 		}
-
+#ifdef DLIB_USE_CUDA
+		cuda::compute_loss_binary_cross_entropy cuda_compute;
+#endif
 	};
 
 	template <typename T>

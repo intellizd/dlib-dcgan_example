@@ -1,10 +1,7 @@
-
 # dlib C++ library [![Travis Status](https://travis-ci.org/davisking/dlib.svg?branch=master)](https://travis-ci.org/davisking/dlib)
 
 Dlib is a modern C++ toolkit containing machine learning algorithms and tools for creating complex software in C++ to solve real world problems. See [http://dlib.net](http://dlib.net) for the main project documentation and API reference.
 
-this is result of mnist dcgan.
-![DCGAN](https://user-images.githubusercontent.com/57841991/69500324-6c24e380-0f3d-11ea-8072-baf2a95b9a20.png)
 
 
 ## Compiling dlib C++ example programs

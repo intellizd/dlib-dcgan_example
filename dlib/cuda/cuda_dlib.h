@@ -481,6 +481,60 @@ namespace dlib
 
 			mutable cuda_data_void_ptr buf;
 		};
+		class compute_loss_binary_cross_entropy
+		{
+			/*!
+				The point of this class is to compute the loss computed by
+				loss_multiclass_log_per_pixel, but to do so with CUDA.
+			!*/
+		public:
+
+			compute_loss_binary_cross_entropy(
+			)
+			{
+			}
+
+			template <
+				typename const_label_iterator
+			>
+				void operator() (
+					const_label_iterator truth,
+					const tensor& subnetwork_output,
+					tensor& gradient,
+					double& loss
+					) const
+			{
+				// Allocate a cuda buffer to store all the truth images and also one float
+				// for the scalar loss output.
+				buf = device_global_buffer(subnetwork_output.num_samples() * sizeof(float) + sizeof(float));
+				std::vector<float> truth_vec;			
+				cuda_data_void_ptr loss_buf = buf;
+				for (long i = 0; i < subnetwork_output.num_samples(); ++i, ++truth)
+				{
+					//memcpy(buf, 0, subnetwork_output.num_samples() * sizeof(float));
+					truth_vec.push_back(*truth);
+					
+				
+
+				}
+				memcpy(buf, &truth_vec[0], subnetwork_output.num_samples() * sizeof(float));
+				//memcpy(buf, &truth[0], subnetwork_output.num_samples() * sizeof(float));
+			//	cout << buf.data() << endl;
+				do_work(static_cast<float*>(loss_buf.data()), static_cast<float*>(buf.data()), subnetwork_output, gradient, loss);
+			}
+
+		private:
+
+			static void do_work(
+				float* loss_cuda_work_buffer,
+				const float* truth_buffer,
+				const tensor& subnetwork_output,
+				tensor& gradient,
+				double& loss
+			);
+
+			mutable cuda_data_void_ptr buf;
+		};
         class compute_loss_binary_log
         {
             /*!
@@ -512,11 +566,12 @@ namespace dlib
                 
 
                 // copy the truth data into a cuda buffer.
-                for (long i = 0; i < subnetwork_output.num_samples(); ++i)
+                for (long i = 0; i < subnetwork_output.num_samples(); i++, truth++)
                 {                   
 					
-					
-					memcpy(buf + i * sizeof(float), *truth++, sizeof(float));
+
+					const float& t = *truth;
+					memcpy(buf + i * sizeof(float),t, sizeof(float));
 				
                 }
 

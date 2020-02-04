@@ -1305,7 +1305,7 @@ namespace dlib
         }
 		__global__ void _cuda_leakyrelu(const float* s, float* d, size_t n, const float* pp)
 		{
-			const float p = 0.01f;
+			const float p = 0.1f;
 			for (auto i : grid_stride_range(0, n))
 			{
 				if (s[i] > 0)
@@ -1357,7 +1357,7 @@ namespace dlib
         }
 		__global__ void _cuda_leakyrelu_gradient(float* out, const float* s, const float* gi, size_t n, const float* pp, float* ppgrad)
 		{
-			const float p = 0.01f;
+			const float p = 0.2f;
 			float pgrad = 0;
 			for (auto i : grid_stride_range(0, n))
 			{
@@ -1758,6 +1758,7 @@ namespace dlib
 		__global__ void _cuda_compute_loss_binary_log(float* loss_out, float* g, const float* truth, size_t sample_size, const float scale,const float* out_data)
 		{
 			double loss = 0;
+			
 			for (long i = 0; i < sample_size; ++i)
 			{
 				const float y = *truth++;
@@ -1779,7 +1780,37 @@ namespace dlib
 
 			warp_reduce_atomic_add(*loss_out, loss);
 		}
+		__global__ void _cuda_compute_loss_binary_cross_entropy(float* loss_out, float* g, const float* truth, size_t sample_size, const float scale, const float* out_data)
+		{
+			double loss = 0;
+			for (auto i : grid_stride_range(0, sample_size))
+			{
+				
+					const float y = truth[i];
 
+
+					float y_ = g[i];
+					float BCEL = (y * cuda_safe_log(y_) - (1 - y) * cuda_safe_log(1 - y_)); //this is binary cross entorpy loss function 
+
+					if (y > 0)
+					{
+						loss += BCEL;
+						g[i] = scale * (g[i] - 1);
+					}
+					else
+					{
+						loss += BCEL;
+						g[i] = scale * g[i];
+
+					}
+					//if (i == 0)
+					//	printf("y: %f y_: %f BCEL:%f out :%f\n", y, y_, BCEL, out_data[i]);
+
+				
+			}
+
+			warp_reduce_atomic_add(*loss_out, loss);
+		}
 		void compute_loss_binary_log::
 			do_work(
 				float* loss_cuda_work_buffer,
@@ -1803,7 +1834,29 @@ namespace dlib
 			CHECK_CUDA(cudaMemcpy(&floss, loss_cuda_work_buffer, sizeof(float), cudaMemcpyDefault));
 			loss = scale * floss;
 		}
+		void compute_loss_binary_cross_entropy::
+			do_work(
+				float* loss_cuda_work_buffer,
+				const float* truth_buffer,
+				const tensor& subnetwork_output,
+				tensor& gradient,
+				double& loss
+			)
+		{
+			CHECK_CUDA(cudaMemset(loss_cuda_work_buffer, 0, sizeof(float)));
+			//sigmoid(gradient, subnetwork_output);
 
+			const double scale = 1.0 / subnetwork_output.num_samples();
+
+			//	float* g = grad.host();
+
+			launch_kernel(_cuda_compute_loss_binary_cross_entropy, max_jobs(gradient.size()),
+				loss_cuda_work_buffer, gradient.device(), truth_buffer, subnetwork_output.num_samples(), scale, subnetwork_output.host());
+
+			float floss;
+			CHECK_CUDA(cudaMemcpy(&floss, loss_cuda_work_buffer, sizeof(float), cudaMemcpyDefault));
+			loss = scale * floss;
+		}
     }
 }
 

@@ -82,6 +82,10 @@ namespace dlib
 		{
 			this->net.clean();
 		}
+		void setUpdateLastSync(bool bUpdateSync)
+		{
+			updated_net_since_last_sync = bUpdateSync;
+		}
         dnn_trainer() = delete;
         dnn_trainer(const dnn_trainer&) = delete;
         dnn_trainer& operator=(const dnn_trainer&) = delete;
